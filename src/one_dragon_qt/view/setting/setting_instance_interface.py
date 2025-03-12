@@ -7,6 +7,7 @@ from qfluentwidgets import FluentIcon, LineEdit, PushButton, \
 from one_dragon.base.config.game_account_config import GameRegionEnum
 from one_dragon.base.config.one_dragon_config import OneDragonInstance, RunInOneDragonApp
 from one_dragon.base.operation.one_dragon_context import OneDragonContext
+from zzz_od.context.zzz_context import ZContext
 from one_dragon.utils.i18_utils import gt
 from one_dragon.utils.log_utils import log
 from one_dragon_qt.widgets.setting_card.combo_box_setting_card import ComboBoxSettingCard
@@ -16,6 +17,7 @@ from one_dragon_qt.widgets.setting_card.text_setting_card import TextSettingCard
 from one_dragon_qt.widgets.vertical_scroll_interface import VerticalScrollInterface
 from one_dragon_qt.widgets.column import Column
 from one_dragon_qt.widgets.combo_box import ComboBox
+from one_dragon_qt.widgets.setting_card.agent_outfit_setting_card import AgentOutfitSettingCard
 
 
 class InstanceSettingCard(MultiPushSettingCard):
@@ -100,7 +102,7 @@ class InstanceSettingCard(MultiPushSettingCard):
 
 class SettingInstanceInterface(VerticalScrollInterface):
 
-    def __init__(self, ctx: OneDragonContext, show_login_btn: bool = False, parent=None):
+    def __init__(self, ctx: ZContext, show_login_btn: bool = False, parent=None):
         VerticalScrollInterface.__init__(
             self,
             object_name='setting_instance_interface',
@@ -108,7 +110,7 @@ class SettingInstanceInterface(VerticalScrollInterface):
             parent=parent,
             nav_text_cn='多账户管理'
         )
-        self.ctx: OneDragonContext = ctx
+        self.ctx: ZContext = ctx
         self.show_login_btn: bool = show_login_btn
 
     def get_content_widget(self) -> QWidget:
@@ -146,6 +148,7 @@ class SettingInstanceInterface(VerticalScrollInterface):
         self.content_widget.add_stretch(1)
 
         self.init_game_account_config()
+        self.init_agent_outfit_config()
 
     def init_game_account_config(self) -> None:
         # 初始化账号和密码
@@ -153,6 +156,12 @@ class SettingInstanceInterface(VerticalScrollInterface):
         self.game_region_opt.init_with_adapter(self.ctx.game_account_config.get_prop_adapter('game_region'))
         self.game_account_opt.init_with_adapter(self.ctx.game_account_config.get_prop_adapter('account'))
         self.game_password_opt.init_with_adapter(self.ctx.game_account_config.get_prop_adapter('password'))
+
+    def init_agent_outfit_config(self) -> None:
+        # 初始化代理人皮肤
+        self.agent_outfit_opt.outfit_nicole_opt.init_with_adapter(self.ctx.agent_outfit_config.get_prop_adapter('nicole'))
+        self.agent_outfit_opt.outfit_ellen_opt.init_with_adapter(self.ctx.agent_outfit_config.get_prop_adapter('ellen'))
+        self.agent_outfit_opt.outfit_astra_yao_opt.init_with_adapter(self.ctx.agent_outfit_config.get_prop_adapter('astra_yao'))
 
     def _get_instanceSwitch_group(self) -> QWidget:
         instance_switch_group = SettingCardGroup(gt('账户列表', 'ui'))
@@ -200,6 +209,9 @@ class SettingInstanceInterface(VerticalScrollInterface):
         # self.input_way_opt = ComboBoxSettingCard(icon=FluentIcon.CLIPPING_TOOL, title='输入方式',
         #                                          options_enum=TypeInputWay)
         # instance_settings_group.addSettingCard(self.input_way_opt)
+
+        self.agent_outfit_opt = AgentOutfitSettingCard(self.ctx)
+        instance_settings_group.addSettingCard(self.agent_outfit_opt)
 
         return instance_settings_group
 

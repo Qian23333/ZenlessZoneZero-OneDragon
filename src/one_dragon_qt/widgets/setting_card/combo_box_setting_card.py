@@ -56,30 +56,23 @@ class ComboBoxSettingCard(SettingCardBase):
         if self.with_tooltip:
             self.titleLabel.installEventFilter(self)
 
-        # 初始化选项
-        self._opts_list: List[ConfigItem] = []
-        self._initialize_options(options_enum, options_list)
-
+        # 初始化选项 - 使用ComboBox的方法
+        self.combo_box.initialize_options(options_enum, options_list)
+        
         # 设置初始索引
-        self.last_index = -1
-        if self.combo_box.count() > 0:
-            self.combo_box.setCurrentIndex(0)
-            self.last_index = 0
+        self.last_index = self.combo_box.currentIndex()
 
         # 连接信号与槽
         self.combo_box.currentIndexChanged.connect(self._on_index_changed)
+        
+        # 如果有适配器，初始化
+        if adapter:
+            self.init_with_adapter(adapter)
 
     def _initialize_options(self, options_enum: Optional[Iterable[Enum]], options_list: Optional[List[ConfigItem]]) -> None:
         """从枚举或列表初始化下拉框选项。"""
-        if options_enum:
-            for opt in options_enum:
-                if isinstance(opt.value, ConfigItem):
-                    self._opts_list.append(opt.value)
-                    self.combo_box.addItem(opt.value.ui_text, userData=opt.value.value)
-        elif options_list:
-            for opt_item in options_list:
-                self._opts_list.append(opt_item)
-                self.combo_box.addItem(opt_item.ui_text, userData=opt_item.value)
+        # 此方法已弃用，使用combo_box.initialize_options代替
+        self.combo_box.initialize_options(options_enum, options_list)
 
     def eventFilter(self, obj, event: QEvent) -> bool:
         """处理标题标签的鼠标事件。"""
@@ -123,20 +116,15 @@ class ComboBoxSettingCard(SettingCardBase):
 
     def set_options_by_list(self, options: List[ConfigItem]) -> None:
         """通过 ConfigItem 列表设置下拉框选项。"""
-        self.combo_box.blockSignals(True)
-        self.combo_box.clear()
-        self._opts_list.clear()
-
-        for opt_item in options:
-            self._opts_list.append(opt_item)
-            self.combo_box.addItem(opt_item.ui_text, userData=opt_item.value)
-
-        self.combo_box.blockSignals(False)
+        self.combo_box.initialize_options(options_list=options)
+        self._update_desc()
 
     def init_with_adapter(self, adapter: Optional[YamlConfigAdapter]) -> None:
         """初始化配置适配器。"""
         self.adapter = adapter
-        self.setValue(None if adapter is None else adapter.get_value(), emit_signal=False)
+        # 将适配器传递给ComboBox
+        self.combo_box.init_with_adapter(adapter)
+        self._update_desc()
 
     def _on_index_changed(self, index: int) -> None:
         """索引变化时发射信号。"""
@@ -147,16 +135,19 @@ class ComboBoxSettingCard(SettingCardBase):
         self._update_desc()
         val = self.combo_box.itemData(index)
 
-        if self.adapter is not None:
-            self.adapter.set_value(val)
+        # ComboBox现在自己处理适配器的更新，这里不需要再做
+        # if self.adapter is not None:
+        #     self.adapter.set_value(val)
 
         self.value_changed.emit(index, val)
 
     def _update_desc(self) -> None:
         """更新描述显示。"""
-        if self.combo_box.currentIndex() >= 0:
-            desc = self._opts_list[self.combo_box.currentIndex()].desc
-            self.setContent(desc)
+        index = self.combo_box.currentIndex()
+        if index >= 0:
+            desc = self.combo_box.get_option_desc(index)
+            if desc:
+                self.setContent(desc)
 
     def setValue(self, value: object, emit_signal: bool = True) -> None:
         """设置下拉框的值。"""
