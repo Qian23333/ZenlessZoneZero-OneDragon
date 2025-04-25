@@ -20,6 +20,7 @@ class RiduWeeklyApp(ZApplication):
             op_name=gt('丽都周纪(领奖励)', 'ui'),
             run_record=ctx.ridu_weekly_record,
             retry_in_od=True,  # 传送落地有可能会歪 重试
+            need_notify=True,
         )
 
     @operation_node(name='快捷手册', is_start_node=True)
@@ -67,6 +68,7 @@ class RiduWeeklyApp(ZApplication):
     @node_from(from_name='领取奖励')
     @operation_node(name='完成后返回')
     def finish(self) -> OperationRoundResult:
+        self.notify()  # 发送通知
         op = BackToNormalWorld(self.ctx)
         return self.round_by_op_result(op.execute())
 
