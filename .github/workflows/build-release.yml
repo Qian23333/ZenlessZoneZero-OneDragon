@@ -228,11 +228,13 @@ jobs:
         if ([string]::IsNullOrWhiteSpace($changelog_content)) {
           $changelog_content = "No new changes or unable to determine changelog."
         }
-        
-        # Escape for GITHUB_OUTPUT: % -> %25, newline -> %0A, carriage return -> %0D
-        $escaped_changelog = $changelog_content -replace '%', '%25' -replace "`n", '%0A' -replace "`r", '%0D'
-        
-        echo "clean_changelog=$escaped_changelog" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+        $output_name = "clean_changelog"
+        $delimiter = "CHANGELOG_DELIMITER_$(New-Guid)"
+
+        echo "$output_name<<$delimiter" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+        echo $changelog_content | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+        echo $delimiter | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
     - name: Create Release
       uses: softprops/action-gh-release@v1
