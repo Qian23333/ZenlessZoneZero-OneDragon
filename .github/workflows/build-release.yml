@@ -49,11 +49,15 @@ jobs:
       shell: pwsh
       run: |
         $venvScripts = ".\zzz-od\Scripts"
-        $upxDir = Join-Path $venvScripts "upx.exe"
+        $upxDir = Join-Path $venvScripts "upx"
+        $sourceUpxPath = Join-Path $upxDir "upx.exe"
+        $destinationUpxPath = Join-Path $venvScripts "upx.exe"
         $zipPath = "upx.zip"
 
         Invoke-WebRequest -Uri "https://github.com/upx/upx/releases/download/v4.2.3/upx-4.2.3-win64.zip" -OutFile $zipPath
         Expand-Archive -Path $zipPath -DestinationPath $upxDir -Force
+        Move-Item -Path "$upxDir/upx.exe" -Destination $destinationUpxPath -Force
+        Remove-Item -Path $upxDir -Recurse -Force
 
     - name: Build executables
       shell: pwsh
