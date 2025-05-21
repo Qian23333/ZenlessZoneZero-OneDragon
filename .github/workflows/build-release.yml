@@ -49,7 +49,7 @@ jobs:
       shell: pwsh
       run: |
         $venvScripts = ".\zzz-od\Scripts"
-        $upxDir = Join-Path $venvScripts "upx"
+        $upxDir = Join-Path $venvScripts "upx.exe"
         $zipPath = "upx.zip"
 
         Invoke-WebRequest -Uri "https://github.com/upx/upx/releases/download/v4.2.3/upx-4.2.3-win64.zip" -OutFile $zipPath
