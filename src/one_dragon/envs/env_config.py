@@ -74,9 +74,8 @@ class ScreenshotMethodEnum(Enum):
 
     AUTO = ConfigItem('自动', 'auto')
     MSS = ConfigItem('MSS', 'mss')
-    PIL = ConfigItem('dxgi', 'dxgi')
-    WGC = ConfigItem('WGC', 'wgc')
     PRINT_WINDOW = ConfigItem('PrintWindow', 'print_window')
+    PIL = ConfigItem('DXGI', 'dxgi')
 
 
 class EnvConfig(YamlConfig):

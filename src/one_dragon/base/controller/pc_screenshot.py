@@ -3,7 +3,6 @@ import cv2
 import ctypes
 import numpy as np
 import pyautogui
-import threading
 
 from typing import Optional
 from mss.base import MSSBase
@@ -24,13 +23,6 @@ class PcScreenshot:
         # MSS instance
         self.mss_instance: Optional[MSSBase] = None
 
-        # WGC instance
-        self.wgc_capture = None
-        self.wgc_frame_lock = None
-        self.wgc_latest_frame = None
-        self.wgc_frame_event = None
-        self.wgc_capture_active = False
-
         # D3DShot instance
         self.d3dshot_instance = None
 
@@ -50,23 +42,20 @@ class PcScreenshot:
             return self.get_screenshot_print_window(independent)
         elif self.initialized_method == "dxgi":
             return self.get_screenshot_dxgi(independent)
-        elif self.initialized_method == "wgc":
-            return self.get_screenshot_wgc(independent)
         else:  # 独立截图
             return self.get_screenshot_print_window(independent)
 
     def init_screenshot(self, method: str):
         """
         初始化截图方法，带有回退机制
-        :param method: 首选的截图方法 ("mss", "dxgi", "wgc", "auto")
+        :param method: 首选的截图方法 ("mss", "dxgi", "auto")
         """
         # 定义方法优先级
         fallback_order = {
             "mss": ["mss", "print_window"],
             "print_window": ["print_window", "mss"],
-            "wgc": ["wgc", "dxgi", "print_window", "mss"],
-            "dxgi": ["dxgi", "wgc", "print_window", "mss"],
-            "auto": ["print_window", "mss", "wgc", "dxgi"]
+            "dxgi": ["dxgi", "print_window", "mss"],
+            "auto": ["print_window", "mss", "dxgi"]
         }
 
         methods_to_try = fallback_order.get(method, ["mss"])
@@ -80,8 +69,6 @@ class PcScreenshot:
                 success = True
             elif attempt_method == "dxgi":
                 success = self.init_dxgi()
-            elif attempt_method == "wgc":
-                success = self.init_wgc()
 
             if success:
                 self.initialized_method = attempt_method
@@ -122,64 +109,6 @@ class PcScreenshot:
                 return True
         except Exception as e:
             log.debug(f"D3DShot初始化失败: {str(e)}")
-            return False
-
-    def init_wgc(self):
-        """初始化WGC资源"""
-        if self.wgc_capture:
-            self.wgc_capture = None
-            try:
-                self.wgc_latest_frame = None
-                self.wgc_frame_lock = None
-                self.wgc_capture_active = False
-            except:
-                pass
-
-        hwnd = self.game_win.get_hwnd()
-        if not hwnd:
-            log.warning('未找到目标窗口，无法截图')
-            return False
-
-        try:
-            from windows_capture import WindowsCapture, Frame, InternalCaptureControl
-            self.wgc_latest_frame = None
-            self.wgc_frame_lock = threading.Lock()  # 保护帧数据的线程锁
-            self.wgc_capture_active = False
-
-            # 创建WindowsCapture实例
-            self.wgc_capture = WindowsCapture(
-                cursor_capture=None,  # 不捕获光标
-                draw_border=None,     # 不绘制边框
-                monitor_index=None,   # 不使用显示器索引
-                window_name=self.game_win.win_title  # 使用窗口名称
-            )
-
-            # 注册帧到达事件处理器 - 将最新帧存储在内存中
-            @self.wgc_capture.event
-            def on_frame_arrived(frame: Frame, capture_control: InternalCaptureControl):
-                try:
-                    if frame.frame_buffer is not None:
-                        # 使用线程锁保护帧数据更新
-                        with self.wgc_frame_lock:
-                            self.wgc_latest_frame = {
-                                'data': frame.frame_buffer,
-                                'width': frame.width,
-                                'height': frame.height,
-                                'timestamp': time.time()
-                            }
-                except Exception as e:
-                    log.debug(f'WGC帧处理异常: {str(e)}')
-
-            # 注册捕获关闭事件处理器
-            @self.wgc_capture.event
-            def on_closed():
-                log.debug('WGC捕获会话已关闭')
-                self.wgc_capture_active = False
-
-            return True
-
-        except Exception as e:
-            log.debug(f'WGC初始化失败: {str(e)}')
             return False
 
     def get_screenshot_mss(self, independent: bool = False) -> MatLike | None:
@@ -372,84 +301,3 @@ class PcScreenshot:
         log.debug(f"DXGI 截图耗时:{after_screenshot_time - before_screenshot_time}")
 
         return screenshot
-
-    def get_screenshot_wgc(self, independent: bool = False) -> MatLike | None:
-        """
-        使用Windows Graphics Capture (WGC) 进行截图
-        :return: 截图
-        """
-        hwnd = self.game_win.get_hwnd()
-        if not hwnd:
-            log.warning('未找到目标窗口，无法截图')
-            return None
-
-        # 初始化WGC资源
-        if self.wgc_capture is None:
-            if not self.init_wgc():
-                log.warning('WGC 初始化失败')
-                return None
-
-        try:
-            before_screenshot_time = time.time()
-            # 如果捕获未激活，启动捕获
-            if not self.wgc_capture_active:
-                # 在单独的线程中启动捕获以避免阻塞
-                def start_capture():
-                    try:
-                        self.wgc_capture_active = True
-                        self.wgc_capture.start()
-                    except Exception as e:
-                        log.debug(f'启动WGC捕获失败: {str(e)}')
-                        self.wgc_capture_active = False
-
-                capture_thread = threading.Thread(target=start_capture, daemon=True)
-                capture_thread.start()
-
-                # 等待捕获启动
-                time.sleep(0.5)
-
-            # 使用线程锁获取最新帧数据
-            latest_frame = None
-            if self.wgc_frame_lock is not None:
-                with self.wgc_frame_lock:
-                    latest_frame = self.wgc_latest_frame
-            else:
-                latest_frame = self.wgc_latest_frame
-
-            # 检查是否有可用的帧数据
-            if latest_frame is None:
-                log.warning('未获取到WGC帧数据，可能捕获尚未启动或窗口不可见')
-                return None
-
-            # 处理帧数据
-            try:
-                img_array = latest_frame['data']
-                # 检查图像格式并转换为RGB
-                if len(img_array.shape) == 3:
-                    if img_array.shape[2] == 4:  # RGBA
-                        screenshot = cv2.cvtColor(img_array, cv2.COLOR_RGBA2RGB)
-                    elif img_array.shape[2] == 3:  # RGB
-                        screenshot = img_array
-                    else:
-                        log.warning(f'不支持的图像通道数: {img_array.shape[2]}')
-                        return None
-                else:
-                    log.warning(f'不支持的图像形状: {img_array.shape}')
-                    return None
-
-            except Exception as e:
-                log.debug(f'WGC帧数据处理异常: {str(e)}')
-                return None
-
-            # 处理缩放
-            if self.game_win.is_win_scale:
-                screenshot = cv2.resize(screenshot, (self.standard_width, self.standard_height))
-
-            after_screenshot_time = time.time()
-            log.debug(f"WGC 截图耗时:{after_screenshot_time - before_screenshot_time}")
-
-            return screenshot
-
-        except Exception as e:
-            log.error(f'WGC截图失败: {str(e)}')
-            return None
