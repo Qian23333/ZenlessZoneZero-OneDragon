@@ -4,7 +4,7 @@ from qfluentwidgets import FluentIconBase, SwitchButton, IndicatorPosition
 from typing import Union
 
 from one_dragon.base.operation.one_dragon_context import OneDragonContext
-from one_dragon_qt.widgets.setting_card.common_download_card import ZipDownloaderSettingCard
+from one_dragon_qt.widgets.download_card.common_download_card import ZipDownloaderSettingCard
 
 
 class OnnxModelDownloadCard(ZipDownloaderSettingCard):
