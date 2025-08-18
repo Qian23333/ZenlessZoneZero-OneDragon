@@ -346,6 +346,10 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setAttribute(Qt.ApplicationAttribute.AA_DontCreateNativeWidgetSiblings)
 
+    # 初始化数据库
+    from one_dragon.base.config.sqlite_operator import sqlite_operator
+    sqlite_operator.init_db()
+
     _ctx = ZContext()
 
     # 加载配置
