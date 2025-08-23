@@ -2,7 +2,7 @@ from enum import Enum
 from typing import Optional
 
 from one_dragon.base.config.config_item import ConfigItem
-from one_dragon.base.config.yaml_config import YamlConfig
+from one_dragon.base.config.user_config import UserConfig
 
 
 class GamePlatformEnum(Enum):
@@ -25,7 +25,7 @@ class GameRegionEnum(Enum):
     TWHKMO = ConfigItem('港澳台服', 'twhkmo')
 
 
-class GameAccountConfig(YamlConfig):
+class GameAccountConfig(UserConfig):
 
     def __init__(self, instance_idx: int,
                  default_platform: Optional[str] = None,
@@ -34,7 +34,7 @@ class GameAccountConfig(YamlConfig):
                  default_account: Optional[str] = None,
                  default_password: Optional[str] = None,
                  ):
-        YamlConfig.__init__(self, 'game_account', instance_idx=instance_idx)
+        UserConfig.__init__(self, 'game_account', instance_idx=instance_idx)
 
         # 迁移的时候 使用旧数据作为默认值
         self.default_platform: str = default_platform
