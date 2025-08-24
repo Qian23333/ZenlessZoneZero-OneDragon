@@ -1,7 +1,7 @@
 from datetime import datetime
 from pathlib import Path
 
-from sqlalchemy import create_engine, Column, String, Integer, Text, DateTime
+from sqlalchemy import create_engine, event, Column, String, Integer, Text, DateTime
 from sqlalchemy.orm import DeclarativeBase, scoped_session, sessionmaker
 
 from one_dragon.utils import os_utils
@@ -44,18 +44,20 @@ class SqliteOperator:
         # Enable cross-thread access and WAL for better concurrency
         self.engine = create_engine(
             f'sqlite:///{db_path}',
-            connect_args={
-                "check_same_thread": False,
-                "timeout": 5.0,  # 避免短暂锁导致的立即失败
-            }
+            connect_args={"check_same_thread": False}
         )
-        try:
-            with self.engine.connect() as conn:
-                # SQLAlchemy 2.0 推荐使用 exec_driver_sql 执行原生 PRAGMA
-                conn.exec_driver_sql("PRAGMA journal_mode=WAL;")
-        except Exception:
-            # Non-fatal if PRAGMA fails
-            log.debug("设置SQLite WAL模式失败，继续以默认模式运行")
+
+        # 使用事件监听器，确保每个连接都开启 WAL 模式
+        @event.listens_for(self.engine, "connect")
+        def set_sqlite_pragma(dbapi_connection, connection_record):
+            """为每个 SQLite 连接设置 PRAGMA。"""
+            cursor = dbapi_connection.cursor()
+            try:
+                cursor.execute("PRAGMA journal_mode=WAL;")
+                cursor.execute("PRAGMA busy_timeout = 5000;") # 5秒超时
+                cursor.execute("PRAGMA foreign_keys=ON;")
+            finally:
+                cursor.close()
 
         # 创建表和会话
         Base.metadata.create_all(self.engine)
