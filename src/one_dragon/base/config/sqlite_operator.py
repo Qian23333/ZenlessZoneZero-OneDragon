@@ -20,8 +20,7 @@ class ConfigContent(Base):
     __tablename__ = 'config_content'
     __table_args__ = {'extend_existing': True}
 
-    id = Column(Integer, primary_key=True)
-    path = Column(String(255), nullable=False, unique=True)
+    path = Column(String(255), primary_key=True)
     content = Column(Text, nullable=False)
     timestamp = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
@@ -65,8 +64,8 @@ class SqliteOperator:
         self.Session = scoped_session(self.SessionFactory)
 
     def ensure_init(self):
-        if self.engine is None or self.Session is None:
-            self.init_db()
+        if self.Session is None:
+            raise RuntimeError("数据库未初始化")
 
     def get(self, path: str) -> str | None:
         self.ensure_init()
@@ -81,14 +80,8 @@ class SqliteOperator:
         self.ensure_init()
         with self.Session() as session:
             try:
-                record = session.query(ConfigContent).filter_by(path=path).first()
-                if record:
-                    record.content = content
-                    record.timestamp = datetime.now()
-                else:
-                    record = ConfigContent(path=path, content=content)
-                    session.add(record)
-
+                record = ConfigContent(path=path, content=content, timestamp=datetime.now())
+                session.merge(record)
                 session.commit()
             except Exception:
                 session.rollback()
@@ -109,7 +102,7 @@ class SqliteOperator:
     def exists(self, path: str) -> bool:
         self.ensure_init()
         with self.Session() as session:
-            return session.query(ConfigContent.id).filter_by(path=path).first() is not None
+            return session.get(ConfigContent, path) is not None
 
 
 SQLITE_OPERATOR = SqliteOperator()
