@@ -57,10 +57,9 @@ class SqliteOperator:
             # Non-fatal if PRAGMA fails
             log.debug("设置SQLite WAL模式失败，继续以默认模式运行")
 
-        # 创建单表
+        # 创建表和会话
         Base.metadata.create_all(self.engine)
         self.SessionFactory = sessionmaker(bind=self.engine)
-        # Thread-safe session
         self.Session = scoped_session(self.SessionFactory)
 
     def ensure_init(self):
@@ -69,56 +68,46 @@ class SqliteOperator:
 
     def get(self, path: str) -> str | None:
         self.ensure_init()
-        session = self.Session()
-        try:
+        with self.Session() as session:
             record = session.query(ConfigContent).filter_by(path=path).first()
             if record:
                 return record.content
             else:
                 return None
-        finally:
-            session.close()
 
     def save(self, path: str, content: str):
         self.ensure_init()
-        session = self.Session()
-        try:
-            record = session.query(ConfigContent).filter_by(path=path).first()
-            if record:
-                record.content = content
-                record.timestamp = datetime.now()
-            else:
-                record = ConfigContent(path=path, content=content)
-                session.add(record)
+        with self.Session() as session:
+            try:
+                record = session.query(ConfigContent).filter_by(path=path).first()
+                if record:
+                    record.content = content
+                    record.timestamp = datetime.now()
+                else:
+                    record = ConfigContent(path=path, content=content)
+                    session.add(record)
 
-            session.commit()
-        except Exception:
-            session.rollback()
-            log.error(f"保存配置失败 {path}", exc_info=True)
-        finally:
-            session.close()
+                session.commit()
+            except Exception:
+                session.rollback()
+                log.error(f"保存配置失败 {path}", exc_info=True)
 
     def delete(self, path: str):
         self.ensure_init()
-        session = self.Session()
-        try:
-            record = session.query(ConfigContent).filter_by(path=path).first()
-            if record:
-                session.delete(record)
-                session.commit()
-        except Exception:
-            session.rollback()
-            log.error(f"删除配置失败 {path}", exc_info=True)
-        finally:
-            session.close()
+        with self.Session() as session:
+            try:
+                record = session.query(ConfigContent).filter_by(path=path).first()
+                if record:
+                    session.delete(record)
+                    session.commit()
+            except Exception:
+                session.rollback()
+                log.error(f"删除配置失败 {path}", exc_info=True)
 
     def exists(self, path: str) -> bool:
         self.ensure_init()
-        session = self.Session()
-        try:
+        with self.Session() as session:
             return session.query(ConfigContent.id).filter_by(path=path).first() is not None
-        finally:
-            session.close()
 
 
 SQLITE_OPERATOR = SqliteOperator()
