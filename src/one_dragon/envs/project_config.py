@@ -1,10 +1,13 @@
-from one_dragon.base.config.yaml_config import YamlConfig
+import os
+from one_dragon.base.config.file_yaml_operator import FileYamlOperator
+from one_dragon.utils import os_utils
 
 
-class ProjectConfig(YamlConfig):
+class ProjectConfig(FileYamlOperator):
 
     def __init__(self):
-        YamlConfig.__init__(self, module_name='project')
+        project_config_path = os.path.join(os_utils.get_path_under_work_dir('config'), 'project.yml')
+        FileYamlOperator.__init__(self, project_config_path)
 
         self.project_name = self.get('project_name')
         self.python_version = self.get('python_version')
