@@ -30,18 +30,20 @@ class UserConfig:
         self.data: dict = {}
         self.key = self._get_key(self.module_name)
 
-        # mock 模式不做任何 IO
-        if not self.is_mock:
-            text = SQLITE_OPERATOR.get(self.key)
+        # mock 模式不做任何 IO -> 直接返回，避免后续逻辑与副作用
+        if self.is_mock:
+            return
 
-            if text is None:
-                text = self._read_from_backup()
+        text = SQLITE_OPERATOR.get(self.key)
 
-            if text is None:
-                text = self._read_from_file()
+        if text is None:
+            text = self._read_from_backup()
 
-            if text is not None:
-                self.data = self._parse_text_to_dict(text)
+        if text is None:
+            text = self._read_from_file()
+
+        if text is not None:
+            self.data = self._parse_text_to_dict(text)
 
     def get(self, prop: str, value=None):
         return (self.data or {}).get(prop, value)
