@@ -96,7 +96,7 @@ class UserConfig:
         if self.sub_dir:
             path = '/'.join(self.sub_dir + [module_name])
         if self.instance_idx is not None:
-            path = f'{self.instance_idx % 10}/{path}'
+            path = f'{self.instance_idx%2:d}/{path}'
         return path
 
     def _get_yaml_path(self) -> Path | None:
@@ -109,7 +109,7 @@ class UserConfig:
         if self.sub_dir is not None:
             sub_dir = sub_dir + self.sub_dir
 
-        dir_path = Path(os_utils.get_path_under_work_dir(*sub_dir))
+        dir_path = Path(os_utils.get_work_dir()) / Path(*sub_dir)
         yml = f'{self.module_name}.yml'
         return dir_path / yml
 
