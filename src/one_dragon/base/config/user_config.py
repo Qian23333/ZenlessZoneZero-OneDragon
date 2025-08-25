@@ -51,9 +51,7 @@ class UserConfig:
     def save(self):
         if self.is_mock or self.key is None:
             return
-        # 将内存数据以 JSON 文本存入 sqlite
         try:
-            # 使用高性能 JSON 序列化（优先 orjson，回退内置 json）
             text = self._to_json_text(self.data or {})
             SQLITE_OPERATOR.save(self.key, text)
         except Exception:
