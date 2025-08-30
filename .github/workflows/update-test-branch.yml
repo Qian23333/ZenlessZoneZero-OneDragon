@@ -39,7 +39,7 @@ jobs:
       with:
         issue-number: ${{ vars.SYNC_STATUS_ISSUE_NUMBER }}
         comment-author: 'github-actions[bot]'
-        body-includes: Build output
+        body-includes: 检测到合并冲突
 
     - name: Post a Comment on Failure
       if: steps.merge-attempt.outcome == 'failure'
